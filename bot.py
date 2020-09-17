@@ -1,8 +1,6 @@
 """
 Домашнее задание №1
-
 Использование библиотек: ephem
-
 * Установите модуль ephem
 * Добавьте в бота команду /planet, которая будет принимать на вход 
   название планеты на английском, например /planet Mars
@@ -10,7 +8,6 @@
   название планеты (подсказка: используйте .split())
 * При помощи условного оператора if и ephem.constellation научите 
   бота отвечать, в каком созвездии сегодня находится планета.
-
 """
 
 import datetime
@@ -23,46 +20,56 @@ PROXY = {'proxy_url': settings.PROXY_URL, 'urllib3_proxy_kwargs': {'username': s
 
 logging.basicConfig(filename='bot.log', level=logging.INFO)
 
-def greet_user(update, context):
-    logging.info('Вызван /start')
-    update.message.reply_text('Привет, пользователь! Ты вызвал команду /start')
-    logging.info("Бот ответил")
+def greet_user(update,context):
+  logging.info('Вызван /start')
+  update.message.reply_text(
+    'Привет, пользователь! Ты вызвал команду /start.\n'
+    '/planet <название_планеты> - узнать в каком созвездии находится планета;\n'
+    '\tДоступные планеты: Марс, Венера, Юпитер.\n'
+    '/next_full_monn - узнать когда ближайшее полнолуние;'
+  )
 
 def planet(update, context):
-    logging.info('Вызван /planet')
-    now = datetime.datetime.now()
-    mars = ephem.Mars(now)
-    planet_name = f'Планета: {mars.name}'
-    stars = ephem.constellation(mars)
-    star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета {mars.name} находится в созвездии {stars[1]}'
-    update.message.reply_text(star_planet)
-    logging.info(star_planet)
-
-def planet_constellation(update, context):
-    user_text = update.message.text 
-    logging.info(user_text)
-    if user_text.lower() == 'mars':
+    print(context.args)
+    logging.info(context.args)
+    if context.args[0].lower() == 'марс':
+        logging.info('вызвана команда /planet Марс')
         now = datetime.datetime.now()
         mars = ephem.Mars(now)
-        planet_name = f'Планета: {mars.name}'
         stars = ephem.constellation(mars)
-        star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета {mars.name} находится в созвездии {stars[1]}'
+        star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Марс находится в созвездии {stars[1]}'
         update.message.reply_text(star_planet)
+    elif context.args[0].lower() == 'юпитер':
+        logging.info('вызвана команда /planet Юпитер')
+        now = datetime.datetime.now()
+        jupiter = ephem.Jupiter(now)
+        stars = ephem.constellation(jupiter)
+        star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Юпитер находится в созвездии {stars[1]}'
+        update.message.reply_text(star_planet)
+    elif context.args[0].lower() == 'венера':
+        logging.info('вызвана команда /planet Венера')
+        now = datetime.datetime.now()
+        venus = ephem.Venus(now)
+        stars = ephem.constellation(venus)
+        star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Венера находится в созвездии {stars[1]}'
+        update.message.reply_text(star_planet)      
     else:
-        update.message.reply_text(f'Такой планеты нет в моей базе')
-    logging.info(star_planet)
+        logging.info('вызвана команда неизвестная планета')
+        update.message.reply_text('Такой планеты нет в моём списке!')
 
+def next_full_moon(update,context):
+    logging.info('вызвана команда /next_full_moon')
+    now = datetime.datetime.now()
+    full_moon = ephem.next_full_moon(now)
+    update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}')   
 
 def main():
     mybot = Updater(settings.API_KEY, use_context=True, request_kwargs=PROXY)
-    
     dp = mybot.dispatcher
     dp.add_handler(CommandHandler("start", greet_user))
     dp.add_handler(CommandHandler("planet", planet))
-    dp.add_handler(MessageHandler(Filters.text, planet_constellation))
-    
+    dp.add_handler(CommandHandler("next_full_moon", next_full_moon))
     logging.info("Бот стартовал")
-
     mybot.start_polling()
     mybot.idle()
 
