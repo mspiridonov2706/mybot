@@ -13,6 +13,7 @@
 import datetime
 import ephem
 import logging
+from random import randint
 import settings
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -26,7 +27,7 @@ def greet_user(update,context):
     'Привет, пользователь! Ты вызвал команду /start.\n'
     '/planet <название_планеты> - узнать в каком созвездии находится планета;\n'
     '\tДоступные планеты: Марс, Венера, Юпитер.\n'
-    '/next_full_monn - узнать когда ближайшее полнолуние;'
+    '/next_full_moon - узнать когда ближайшее полнолуние;'
   )
 
 def planet(update, context):
@@ -63,12 +64,36 @@ def next_full_moon(update,context):
     full_moon = ephem.next_full_moon(now)
     update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}')   
 
+def guess_number(update, context):
+    if context.args:
+      try:
+        user_number = int(context.args[0])
+        message = play_random_numbers(user_number)
+      except (TypeError, ValueError):
+        message = 'Введите целое число'
+
+    else:
+      message = 'Введите число'
+    update.message.reply_text(message)
+
+def play_random_numbers(user_number):
+    bot_number = randint(user_number - 10, user_number + 10)
+    if user_number > bot_number:
+      message = f'Ваше числов {user_number}, моё {bot_number}, вы выиграли'
+    elif user_number == bot_number:
+      message = f'Ваше числов {user_number}, моё {bot_number}, ничья'
+    else:
+      message = f'Ваше числов {user_number}, моё {bot_number}, вы проиграли'
+    return message
+
+
 def main():
     mybot = Updater(settings.API_KEY, use_context=True, request_kwargs=PROXY)
     dp = mybot.dispatcher
     dp.add_handler(CommandHandler("start", greet_user))
     dp.add_handler(CommandHandler("planet", planet))
     dp.add_handler(CommandHandler("next_full_moon", next_full_moon))
+    dp.add_handler(CommandHandler("guess", guess_number))
     logging.info("Бот стартовал")
     mybot.start_polling()
     mybot.idle()
