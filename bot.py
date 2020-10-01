@@ -2,9 +2,11 @@ import datetime
 import ephem
 import logging
 import settings
+
 from emoji import emojize
 from glob import glob
 from random import randint, choice
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 PROXY = {'proxy_url': settings.PROXY_URL, 'urllib3_proxy_kwargs': {'username': settings.PROXY_USERNAME, 'password': settings.PROXY_PASSWORD}}
@@ -20,7 +22,8 @@ def greet_user(update,context):
       '\tДоступные планеты: Марс, Венера, Юпитер.\n'
       '/next_full_moon - узнать когда ближайшее полнолуние;\n'
       '/guess <число> - поиграть с ботом в числа;\n'
-      f'/meme - увидеть мемасик по Python {context.user_data["emoji"]};'
+      f'/meme - увидеть мемасик по Python {context.user_data["emoji"]};',
+      reply_markup=main_keyboard()
     )
 
 def planet(update, context):
@@ -32,30 +35,30 @@ def planet(update, context):
         mars = ephem.Mars(now)
         stars = ephem.constellation(mars)
         star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Марс находится в созвездии {stars[1]}'
-        update.message.reply_text(star_planet)
+        update.message.reply_text(star_planet, reply_markup=main_keyboard())
     elif context.args[0].lower() == 'юпитер':
         logging.info('вызвана команда /planet Юпитер')
         now = datetime.datetime.now()
         jupiter = ephem.Jupiter(now)
         stars = ephem.constellation(jupiter)
         star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Юпитер находится в созвездии {stars[1]}'
-        update.message.reply_text(star_planet)
+        update.message.reply_text(star_planet, reply_markup=main_keyboard())
     elif context.args[0].lower() == 'венера':
         logging.info('вызвана команда /planet Венера')
         now = datetime.datetime.now()
         venus = ephem.Venus(now)
         stars = ephem.constellation(venus)
         star_planet = f'Сегодняшняя дата {now.strftime("%d-%m-%Y %H:%M")}.\nПланета Венера находится в созвездии {stars[1]}'
-        update.message.reply_text(star_planet)      
+        update.message.reply_text(star_planet, reply_markup=main_keyboard())      
     else:
         logging.info('вызвана команда неизвестная планета')
-        update.message.reply_text('Такой планеты нет в моём списке!')
+        update.message.reply_text('Такой планеты нет в моём списке!', reply_markup=main_keyboard())
 
 def next_full_moon(update,context):
     logging.info('вызвана команда /next_full_moon')
     now = datetime.datetime.now()
     full_moon = ephem.next_full_moon(now)
-    update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}')   
+    update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}', reply_markup=main_keyboard())   
 
 def guess_number(update, context):
     if context.args:
@@ -67,7 +70,7 @@ def guess_number(update, context):
 
     else:
       message = 'Введите число'
-    update.message.reply_text(message)
+    update.message.reply_text(message, reply_markup=main_keyboard())
 
 def play_random_numbers(user_number):
     bot_number = randint(user_number - 10, user_number + 10)
@@ -83,13 +86,28 @@ def send_python_meme(update, context):
     python_meme = glob('images/python*.jp*g')
     random_meme = choice(python_meme)
     chat_id = update.effective_chat.id
-    context.bot.send_photo(chat_id=chat_id, photo=open(random_meme, 'rb'))
+    context.bot.send_photo(chat_id=chat_id, photo=open(random_meme, 'rb'), reply_markup=main_keyboard())
 
 def get_smile(user_data):
     if 'emoji' not in user_data:
       smile = choice(settings.USER_EMOJI)
       return emojize(smile, use_aliases=True)
     return user_data['emoji']
+  
+def user_coordinates(update, context):
+    logging.info("запрошены координаты")
+    context.user_data['emoji'] = get_smile(context.user_data)
+    coords = update.message.location
+    print(coords)
+    update.message.reply_text(
+        f"Ваши координаты {coords} {context.user_data['emoji']}!",
+        reply_markup=main_keyboard()
+    )
+
+def main_keyboard():
+    return ReplyKeyboardMarkup([
+        ['Получить мемасик', KeyboardButton(text='Мои координаты', request_location=False)]
+    ])
 
 def main():
     mybot = Updater(settings.API_KEY, use_context=True, request_kwargs=PROXY)
@@ -99,6 +117,8 @@ def main():
     dp.add_handler(CommandHandler("next_full_moon", next_full_moon))
     dp.add_handler(CommandHandler("guess", guess_number))
     dp.add_handler(CommandHandler("meme", send_python_meme))
+    dp.add_handler(MessageHandler(Filters.regex('^(Получить мемасик)$'), send_python_meme))
+    dp.add_handler(MessageHandler(Filters.location, user_coordinates))
     logging.info("Бот стартовал")
     mybot.start_polling()
     mybot.idle()
