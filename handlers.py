@@ -1,10 +1,11 @@
 import datetime
 import ephem
 import logging
+import os
 
 from glob import glob
 from random import randint, choice
-from utils import play_random_numbers, main_keyboard, get_smile
+from utils import play_random_numbers, main_keyboard, get_smile, is_cat
 
 def greet_user(update,context):
     logging.info('Вызван /start')
@@ -80,3 +81,17 @@ def next_full_moon(update,context):
     now = datetime.datetime.now()
     full_moon = ephem.next_full_moon(now)
     update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}', reply_markup=main_keyboard())   
+
+def check_user_photo(update, context):
+    update.message.reply_text('Обрабатываем фотографию')
+    os.makedirs('downloads', exist_ok=True)
+    user_photo = context.bot.getFile(update.message.photo[-1].file_id)
+    file_name = os.path.join('downloads', f'{user_photo.file_id}.jpg')
+    user_photo.download(file_name)
+    if is_cat(file_name):
+        update.message.reply_text('Обнаружен мемасик, добавляю в библиотеку')
+        new_filename = os.path.join('images', f'meme_{user_photo.file_id}.jpg')
+        os.rename(file_name, new_filename)
+    else:
+        update.message.reply_text('МЕМАС НЕ ОБНАРУЖЕН!!')
+        os.remove(file_name)

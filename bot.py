@@ -2,7 +2,7 @@ import logging
 import settings
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from handlers import (greet_user, guess_number, send_python_meme, user_coordinates,
-                        planet, next_full_moon)
+                        planet, next_full_moon, check_user_photo)
 
 PROXY = {'proxy_url': settings.PROXY_URL, 'urllib3_proxy_kwargs': {'username': settings.PROXY_USERNAME, 'password': settings.PROXY_PASSWORD}}
 
@@ -17,6 +17,7 @@ def main():
     dp.add_handler(CommandHandler("next_full_moon", next_full_moon))
     dp.add_handler(CommandHandler("guess", guess_number))
     dp.add_handler(CommandHandler("meme", send_python_meme))
+    dp.add_handler(MessageHandler(Filters.photo, check_user_photo))
     dp.add_handler(MessageHandler(Filters.regex('^(Получить мемасик)$'), send_python_meme))
     dp.add_handler(MessageHandler(Filters.location, user_coordinates))
     logging.info("Бот стартовал")
