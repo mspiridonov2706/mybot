@@ -24,7 +24,7 @@ def get_smile(user_data):
 
 def main_keyboard():
     return ReplyKeyboardMarkup([
-        ['Получить мемасик', KeyboardButton(text='Мои координаты', request_location=True)]
+        ['Получить мемасик', KeyboardButton(text='Мои координаты', request_location=True), 'Заполнить анкету']
     ])
 
 def is_cat(file_name):
