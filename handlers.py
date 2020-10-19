@@ -10,21 +10,19 @@ from utils import play_random_numbers, main_keyboard, is_cat
 
 
 def greet_user(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('Вызван /start')
-    update.message.reply_text(f'''Привет, пользователь! Ты вызвал команду /start.
-/planet <название_планеты> - узнать в каком созвездии находится планета;
-    Доступные планеты: Марс, Венера, Юпитер.
-/next_full_moon - узнать когда ближайшее полнолуние;
-/guess <число> - поиграть с ботом в числа;
-/meme - увидеть мемасик по Python {user["emoji"]};''',
+    update.message.reply_text(f'Привет, пользователь! Ты вызвал команду /start.\n'
+                              f'/planet <название_планеты> - узнать в каком созвездии находится планета;\n'
+                              f'Доступные планеты: Марс, Венера, Юпитер.\n'
+                              f'/next_full_moon - узнать когда ближайшее полнолуние;\n'
+                              f'/guess <число> - поиграть с ботом в числа;\n'
+                              f'/meme - увидеть мемасик по Python {user["emoji"]};',
                               reply_markup=main_keyboard())
 
 
 def guess_number(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('Вызван /guess')
     if context.args:
         try:
@@ -38,31 +36,25 @@ def guess_number(update, context):
 
 
 def send_python_meme(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('Запрошен мемасик')
     python_meme = glob('images/python*.jp*g')
     random_meme = choice(python_meme)
     chat_id = update.effective_chat.id
-    context.bot.send_photo(chat_id=chat_id,
-                           photo=open(random_meme, 'rb'),
-                           reply_markup=main_keyboard())
+    context.bot.send_photo(chat_id=chat_id, photo=open(random_meme, 'rb'), reply_markup=main_keyboard())
 
 
 def user_coordinates(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info("Запрошены координаты")
     coords = update.message.location
     update.message.reply_text(
-        f"Ваши координаты {coords} {user['emoji']}!",
-        reply_markup=main_keyboard()
+        f"Ваши координаты {coords} {user['emoji']}!", reply_markup=main_keyboard()
     )
 
 
 def planet(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     print(context.args)
     logging.info(context.args)
     if context.args[0].lower() == 'марс':
@@ -96,18 +88,15 @@ def planet(update, context):
 
 
 def next_full_moon(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('вызвана команда /next_full_moon')
     now = datetime.datetime.now()
     full_moon = ephem.next_full_moon(now)
-    update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}',
-                              reply_markup=main_keyboard())
+    update.message.reply_text(f'Ближайшее полнолуние произойдёт: {full_moon}', reply_markup=main_keyboard())
 
 
 def check_user_photo(update, context):
-    user = get_or_create_user(db, update.effective_user,
-                              update.message.chat.id)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     update.message.reply_text('Обрабатываем фотографию')
     os.makedirs('downloads', exist_ok=True)
     user_photo = context.bot.getFile(update.message.photo[-1].file_id)
