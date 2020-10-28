@@ -3,10 +3,12 @@ import ephem
 import logging
 import os
 
-from db import db, get_or_create_user
+from db import (db, get_or_create_user, subscribe_user, unsubscribe_user, save_meme_image_vote,
+                user_voted, get_image_rating)
 from glob import glob
 from random import choice
-from utils import play_random_numbers, main_keyboard, is_cat
+from utils import play_random_numbers, main_keyboard, is_cat, meme_rating_inline_keyboard
+from jobs import alarm
 
 
 def greet_user(update, context):
@@ -22,7 +24,7 @@ def greet_user(update, context):
 
 
 def guess_number(update, context):
-    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('Вызван /guess')
     if context.args:
         try:
@@ -41,7 +43,19 @@ def send_python_meme(update, context):
     python_meme = glob('images/python*.jp*g')
     random_meme = choice(python_meme)
     chat_id = update.effective_chat.id
-    context.bot.send_photo(chat_id=chat_id, photo=open(random_meme, 'rb'), reply_markup=main_keyboard())
+    if user_voted(db, random_meme, user['user_id']):
+        rating = get_image_rating(db, random_meme)
+        keyboard = None
+        caption = f'Рейтинг мемасика: {rating}'
+    else:
+        keyboard = meme_rating_inline_keyboard(random_meme)
+        caption = None
+    context.bot.send_photo(
+        chat_id=chat_id,
+        photo=open(random_meme, 'rb'),
+        reply_markup=keyboard,
+        caption=caption
+        )
 
 
 def user_coordinates(update, context):
@@ -54,7 +68,7 @@ def user_coordinates(update, context):
 
 
 def planet(update, context):
-    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    get_or_create_user(db, update.effective_user, update.message.chat.id)
     print(context.args)
     logging.info(context.args)
     if context.args[0].lower() == 'марс':
@@ -88,7 +102,7 @@ def planet(update, context):
 
 
 def next_full_moon(update, context):
-    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    get_or_create_user(db, update.effective_user, update.message.chat.id)
     logging.info('вызвана команда /next_full_moon')
     now = datetime.datetime.now()
     full_moon = ephem.next_full_moon(now)
@@ -96,7 +110,7 @@ def next_full_moon(update, context):
 
 
 def check_user_photo(update, context):
-    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    get_or_create_user(db, update.effective_user, update.message.chat.id)
     update.message.reply_text('Обрабатываем фотографию')
     os.makedirs('downloads', exist_ok=True)
     user_photo = context.bot.getFile(update.message.photo[-1].file_id)
@@ -109,3 +123,34 @@ def check_user_photo(update, context):
     else:
         update.message.reply_text('МЕМАС НЕ ОБНАРУЖЕН!!')
         os.remove(file_name)
+
+
+def subscribed(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    subscribe_user(db, user)
+    update.message.reply_text('Вы успешно подписались')
+
+
+def unsubscribed(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    unsubscribe_user(db, user)
+    update.message.reply_text('Вы отписались')
+
+
+def set_alarm(update, context):
+    try:
+        alarm_seconds = abs(int(context.args[0]))
+        context.job_queue.run_once(alarm, alarm_seconds, context=update.message.chat.id)
+        update.message.reply_text(f'Уведомление через {alarm_seconds} секунд')
+    except (ValueError, TypeError):
+        update.message.reply_text('Введите целое число секунд после команды')
+
+
+def meme_picture_raiting(update, context):
+    update.callback_query.answer()
+    callback_type, image_name, vote = update.callback_query.data.split('|')
+    vote = int(vote)
+    user = get_or_create_user(db, update.effective_user, update.effective_chat.id)
+    save_meme_image_vote(db, user, image_name, vote)
+    rating = get_image_rating(db, image_name)
+    update.callback_query.edit_message_caption(caption=f'Рейтин мемасика: {rating}')
